@@ -182,6 +182,36 @@ function parse_requirements() {
         > $PACKAGE.requirements.txt
 
     rm -f $PACKAGE.requirements.txt.tmp
+
+    rm -f $PACKAGE.requirements_table.txt
+    while read -r line; do
+        parse_constraint_string $line >> $PACKAGE.requirements_table.txt
+    done < $PACKAGE.requirements.txt
+}
+
+
+function parse_constraint_string() {
+    local name=$1
+    local c_eq=
+    local c_ne=
+    local c_ge=
+    local c_gt=
+    local c_le=
+    local c_lt=
+    shift
+
+    while [[ -n "$1" ]]; do
+        case $1 in
+            '=='*) c_eq=${1#\=\=} ;;
+            '!='*) c_ne=${1#\!\=} ;;
+            '>='*) c_gt=${1#\>\=}; c_ge='ge' ;;
+            '<='*) c_lt=${1#\<\=}; c_le='le' ;;
+            '>'*)  c_gt=${1#\>};   c_ge='gt' ;;
+            '<'*)  c_lt=${1#\<};   c_le='lt' ;;
+        esac
+        shift
+    done
+    printf "$name:$c_eq:$c_ge:$c_gt:$c_le:$c_lt:$c_ne\n"
 }
 
 
@@ -210,16 +240,24 @@ function search_deb_packages() {
 
     rm $package.deb_packages.txt
 
-    while read -r name version; do
-        echo "**[$(echo $name $version)]**" >> $package.deb_packages.txt
+    while read -r line; do
+        IFS=':' read -a t <<< "$line"
+        echo ${t[0]}
+        echo "**[$(echo ${t[0]} $version)]**" >> $package.deb_packages.txt
 #        echo '' >> $PACKAGE.deb_packages.txt
 
+        echo "--- FUEL 5.0 ---" >> $package.deb_packages.txt
         zcat $tempdir/Packages.gz \
-            | grep-dctrl -F Package $name -s Package,Version \
+            | grep-dctrl -i -F Package ${t[0]} -s Package,Version \
+            >> $package.deb_packages.txt
+
+        echo "--- UPSTREAM ---" >> $package.deb_packages.txt
+        grep-aptavail -F Section python \
+            | grep-dctrl -i -F Package ${t[0]} -s Package,Version \
             >> $package.deb_packages.txt
 
 #        echo '' >> $PACKAGE.deb_packages.txt
-    done < $package.requirements.txt
+    done < $package.requirements_table.txt
 }
 
 

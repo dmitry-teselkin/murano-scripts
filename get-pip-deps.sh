@@ -149,7 +149,7 @@ function pip_install_dryrun() {
     pip_install_log=./pip_install.log
 
     rm -f $pip_install_log
-    pip install $pip_install_opts $install_from | tee $pip_install_log
+    pip install $pip_install_opts $install_from >> $pip_install_log
 
     cat $pip_install_log \
         | awk '/^Requirement already satisfied/ {print $8}' \
@@ -174,19 +174,15 @@ function get_requirements() {
 
 function parse_requirements() {
     sort -u $PACKAGE.requirements.txt \
-        | grep -v '^$' > $PACKAGE.requirements.txt.tmp
-
-    cat $PACKAGE.requirements.txt.tmp \
+        | grep -v '^$' \
         | perl -pe 's|(.*?)([<>=!].*)|\1 \2|' \
         | sed 's/,/ /' \
-        > $PACKAGE.requirements.txt
-
-    rm -f $PACKAGE.requirements.txt.tmp
+        > $PACKAGE.requirements.txt.tmp
 
     rm -f $PACKAGE.requirements_table.txt
     while read -r line; do
         parse_constraint_string $line >> $PACKAGE.requirements_table.txt
-    done < $PACKAGE.requirements.txt
+    done < $PACKAGE.requirements.txt.tmp
 }
 
 
@@ -215,6 +211,30 @@ function parse_constraint_string() {
 }
 
 
+function build_constraint_string() {
+	local t
+	local s=''
+
+	IFS=':' read -a t <<< "$1"
+	if [[ -n "${t[1]}" ]]; then
+		echo -n "==${t[1]}"
+		return
+	fi
+	case ${t[2]} in
+		gt) s=">${t[3]} ";;
+		ge) s=">=${t[3]} ";;
+	esac
+	case ${t[4]} in
+		lt) s="$s<${t[5]} ";;
+		le) s="$s<=${t[5]} ";;
+	esac
+	if [[ -n ${t[6]} ]]; then
+		s="$s !=${t[6]}"
+	fi
+	echo -n $s
+}
+
+
 function search_in_global_requirements() {
     local package=$1
 
@@ -224,7 +244,7 @@ function search_in_global_requirements() {
     rm -f $package.global_requirements.txt
 
     while read -r name version; do
-        echo "**[$(echo $name $version)]**" >> $package.global_requirements.txt
+        echo "*** [$(echo $name $version)] ***" >> $package.global_requirements.txt
 
         grep $name 'global-requirements.txt' >> $package.global_requirements.txt
     done < $package.requirements.txt
@@ -242,18 +262,22 @@ function search_deb_packages() {
 
     while read -r line; do
         IFS=':' read -a t <<< "$line"
-        echo ${t[0]}
-        echo "**[$(echo ${t[0]} $version)]**" >> $package.deb_packages.txt
+	name=${t[0]}
+	version=$(build_constraint_string $line)
+        echo $name $version
+        echo "*** [$(echo $name $version)] ***" >> $package.deb_packages.txt
 #        echo '' >> $PACKAGE.deb_packages.txt
 
         echo "--- FUEL 5.0 ---" >> $package.deb_packages.txt
         zcat $tempdir/Packages.gz \
-            | grep-dctrl -i -F Package ${t[0]} -s Package,Version \
+            | grep-dctrl -i -F Package $name -s Package,Version \
+            | awk '/Package/{p=$2;next} /Version/{print p " " $2}' \
             >> $package.deb_packages.txt
 
         echo "--- UPSTREAM ---" >> $package.deb_packages.txt
         grep-aptavail -F Section python \
-            | grep-dctrl -i -F Package ${t[0]} -s Package,Version \
+            | grep-dctrl -i -F Package $name -s Package,Version \
+            | awk '/Package/{p=$2;next} /Version/{print p " " $2}' \
             >> $package.deb_packages.txt
 
 #        echo '' >> $PACKAGE.deb_packages.txt
@@ -282,6 +306,7 @@ case $action in
         search_deb_packages $PACKAGE
     ;;
     search)
+        parse_requirements
         search_in_global_requirements $PACKAGE
         search_deb_packages $PACKAGE
     ;;

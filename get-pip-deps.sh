@@ -2,7 +2,8 @@
 
 PACKAGE=${PACKAGE:-''}
 PIP_BUILD_DIR=/tmp/pip_build_$(whoami)
-DEB_REPO_URL='http://osci-obs.vm.mirantis.net:82/ubuntu-fuel-5.0-testing/ubuntu/'
+FUEL_50_TESTING='http://osci-obs.vm.mirantis.net:82/ubuntu-fuel-5.0-testing/ubuntu/'
+FUEL_50_STABLE='http://osci-obs.vm.mirantis.net:82/ubuntu-fuel-5.0-stable/ubuntu/'
 GLOBAL_REQUIREMENTS_URL='https://raw.githubusercontent.com/openstack/requirements/master/global-requirements.txt'
 
 options=','
@@ -84,6 +85,8 @@ function is_option_set() {
 
 function pip_install_dryrun() {
     local pip_install_opts='--no-install --verbose'
+    local n
+    local v
 
     rm -rf $PIP_BUILD_DIR
 
@@ -118,10 +121,13 @@ function pip_install_dryrun() {
 
             install_from=$tmpdir
             PACKAGE=$(cd "$install_from" && (python setup.py --name | tail -1))
+            n=$(cd "$install_from" && (python setup.py --name | tail -1))
+            v=$(cd "$install_from" && (python setup.py --version | tail -1))
 
             rm -f $PACKAGE.requirements.txt
             cat $install_from/requirements.txt \
                 | grep -v '^#' \
+                | xargs -I % printf "%\t#From: $n==$v\n" \
                 >> $PACKAGE.requirements.txt
         ;;
         url)
@@ -130,10 +136,13 @@ function pip_install_dryrun() {
 
             install_from=$tmpdir
             PACKAGE=$(cd "$install_from" && (python setup.py --name | tail -1))
+            n=$(cd "$install_from" && (python setup.py --name | tail -1))
+            v=$(cd "$install_from" && (python setup.py --version | tail -1))
 
             rm -f $PACKAGE.requirements.txt
             cat $install_from/requirements.txt \
                 | grep -v '^#' \
+                | xargs -I % printf "%\t#From: $n==$v\n" \
                 >> $PACKAGE.requirements.txt
         ;;
         *)
@@ -152,7 +161,8 @@ function pip_install_dryrun() {
     pip install $pip_install_opts $install_from >> $pip_install_log
 
     cat $pip_install_log \
-        | awk '/^Requirement already satisfied/ {print $8}' \
+        | grep '^Requirement already satisfied' \
+        | perl -pe 's|.*\)\:\s+(.*?)\s+in.*?\(from\s+(.*)\)|\1\t#From: \2|' \
         >> $PACKAGE.requirements.txt
 
 #    rm -f $pip_install_log
@@ -161,11 +171,16 @@ function pip_install_dryrun() {
 
 function get_requirements() {
     local d
+    local n
+    local v
 
     for d in $(ls -d $PIP_BUILD_DIR/*/); do
+        n=$(cd $d && (python setup.py --name | tail -1))
+        v=$(cd $d && (python setup.py --version | tail -1))
         if [[ -f $d/requirements.txt ]]; then
             cat $d/requirements.txt \
                 | grep -v '^#' \
+                | xargs -I % printf "%\t#From: $n==$v\n" \
                 >> $PACKAGE.requirements.txt
         fi
     done
@@ -173,16 +188,28 @@ function get_requirements() {
 
 
 function parse_requirements() {
-    sort -u $PACKAGE.requirements.txt \
+    local f=$PACKAGE.requirements.txt
+
+    sort -u $f \
         | grep -v '^$' \
+        > $f.tmp
+    mv $f.tmp $f
+
+    cat $f \
+        | perl -pe 's|^(.*?)\s*#.*$|\1|' \
+        | grep -v '^$' \
+        | sed 's/ //g' \
+        | sed 's/\xc2\xa0//g' \
         | perl -pe 's|(.*?)([<>=!].*)|\1 \2|' \
-        | sed 's/,/ /' \
-        > $PACKAGE.requirements.txt.tmp
+        | sed 's/,/ /g' \
+        | sort -u \
+        > $f.tmp
 
     rm -f $PACKAGE.requirements_table.txt
+    touch $PACKAGE.requirements_table.txt
     while read -r line; do
         parse_constraint_string $line >> $PACKAGE.requirements_table.txt
-    done < $PACKAGE.requirements.txt.tmp
+    done < $f.tmp
 }
 
 
@@ -212,71 +239,85 @@ function parse_constraint_string() {
 
 
 function build_constraint_string() {
-	local t
-	local s=''
+    local t
+    local s=''
 
-	IFS=':' read -a t <<< "$1"
-	if [[ -n "${t[1]}" ]]; then
-		echo -n "==${t[1]}"
-		return
-	fi
-	case ${t[2]} in
-		gt) s=">${t[3]} ";;
-		ge) s=">=${t[3]} ";;
-	esac
-	case ${t[4]} in
-		lt) s="$s<${t[5]} ";;
-		le) s="$s<=${t[5]} ";;
-	esac
-	if [[ -n ${t[6]} ]]; then
-		s="$s !=${t[6]}"
-	fi
-	echo -n $s
+    IFS=':' read -a t <<< "$1"
+    if [[ -n "${t[1]}" ]]; then
+        echo -n "==${t[1]}"
+        return
+    fi
+    case ${t[2]} in
+        gt) s=">${t[3]} ";;
+        ge) s=">=${t[3]} ";;
+    esac
+    case ${t[4]} in
+        lt) s="$s<${t[5]} ";;
+        le) s="$s<=${t[5]} ";;
+    esac
+    if [[ -n ${t[6]} ]]; then
+        s="$s !=${t[6]}"
+    fi
+    echo -n $s
 }
 
 
 function search_in_global_requirements() {
     local package=$1
+    local t
+    local name
+    local version
+    local line
 
     rm -f 'global-requirements.txt'
     wget $GLOBAL_REQUIREMENTS_URL
 
     rm -f $package.global_requirements.txt
 
-    while read -r name version; do
+    while read -r line; do
+        IFS=':' read -a t <<< "$line"
+
+        name=${t[0]}
+        version=$(build_constraint_string $line)
+
         echo "*** [$(echo $name $version)] ***" >> $package.global_requirements.txt
 
         grep $name 'global-requirements.txt' >> $package.global_requirements.txt
-    done < $package.requirements.txt
+    done < $package.requirements_table.txt
 }
 
 
 function search_deb_packages() {
     local package=$1
     local tempdir=$(mktemp -d)
-    local name, version
+    local t
+    local name
+    local version
+    local line
 
-    wget $DEB_REPO_URL/Packages.gz -P $tempdir
+    wget $FUEL_50_TESTING/Packages.gz -O $tempdir/Packages_Testing.gz
+    wget $FUEL_50_STABLE/Packages.gz -O $tempdir/Packages_Stable.gz
 
     rm $package.deb_packages.txt
 
     while read -r line; do
         IFS=':' read -a t <<< "$line"
-	name=${t[0]}
-	version=$(build_constraint_string $line)
-        echo $name $version
-        echo "*** [$(echo $name $version)] ***" >> $package.deb_packages.txt
-#        echo '' >> $PACKAGE.deb_packages.txt
 
-        echo "--- FUEL 5.0 ---" >> $package.deb_packages.txt
-        zcat $tempdir/Packages.gz \
-            | grep-dctrl -i -F Package $name -s Package,Version \
+        name=${t[0]}
+        version=$(build_constraint_string $line)
+        echo $name $version
+
+        echo "*** [$(echo $name $version)] ***" >> $package.deb_packages.txt
+
+        echo "--- FUEL 5.0 TESTING ---" >> $package.deb_packages.txt
+        zcat $tempdir/Packages_Testing.gz \
+            | grep-dctrl -i -F Package -e "(^|-)${name}\$" -s Package,Version \
             | awk '/Package/{p=$2;next} /Version/{print p " " $2}' \
             >> $package.deb_packages.txt
 
-        echo "--- UPSTREAM ---" >> $package.deb_packages.txt
-        grep-aptavail -F Section python \
-            | grep-dctrl -i -F Package $name -s Package,Version \
+        echo "--- FUEL STABLE ---" >> $package.deb_packages.txt
+        zcat $tempdir/Packages_Stable.gz \
+            | grep-dctrl -i -F Package -e "(^|-)${name}\$" -s Package,Version \
             | awk '/Package/{p=$2;next} /Version/{print p " " $2}' \
             >> $package.deb_packages.txt
 

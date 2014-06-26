@@ -5,6 +5,8 @@ import re
 import os
 from pushd import pushd
 from getpass import getuser
+from package_repository import *
+from package_mapper import custom_python_packages
 
 
 from sh import python
@@ -176,6 +178,15 @@ class PipPackageRequirements():
         pass
 
     def validate(self, global_requirements):
+        """
+        Returns a list of dicts:
+            {
+                'orig_package': <package found in component's requirements>,
+                'greq_package': <package found in global requirements>,
+                'status': <if package complies with global requirements>,
+                'is_direct_dependency': <if package is a direct dependency for the component>
+            }
+        """
         result = []
         for package in self.entries:
             status, greq_package = global_requirements.validate(package)
@@ -233,6 +244,8 @@ class PipPackageRequirements():
         self.print_report_block(validation_result=validation_result,
                                 compatible=False, direct=False)
 
+
+
 greq_branch='stable/icehouse'
 greq_url="https://raw.githubusercontent.com/openstack/requirements/{0}/global-requirements.txt".format(greq_branch)
 print(greq_url)
@@ -244,3 +257,22 @@ pip_dry_run.install_from_dir('/home/dim/Temp/glance')
 
 validation_result = pip_dry_run.validate(greq)
 pip_dry_run.print_report(validation_result=validation_result)
+
+print("")
+
+repo_set = PackageRepositorySet()
+repo_set.add_custom_packages(custom_package_set=custom_python_packages)
+repo_set.add(MirantisOSCIRepository(fuel_release='5.0.1'))
+repo_set.add(MirantisPublicRepository(fuel_release='5.0.1'))
+repo_set.add(UbuntuPublicRepository(fuel_release='5.0.1'))
+
+print("")
+print("Searching for packages:")
+for item in validation_result:
+    print("")
+    print("*** {0} ({1}):".format(item['orig_package'], item['greq_package']))
+    for r, p, v in repo_set.grep_package(item['orig_package'].name):
+        print("{0}: '{1} {2}'".format(r.name, p, v))
+
+
+#http://paste.openstack.org/show/eHYCIIVW82R7ATFVC74D/

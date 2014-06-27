@@ -10,16 +10,18 @@ from getpass import getuser
 from sh import python
 from sh import tail
 from sh import pip
-from sh import rm
+from sh import rm, mkdir
 from sh import git
-
+from uuid import uuid4
 
 from tempfile import mkdtemp
 from sh import grep_dctrl
+from sh import repoquery
 from sh import wget
 from sh import awk
 from sh import zcat
 import os.path, time
+from lxml import etree
 
 import argparse
 
@@ -30,12 +32,49 @@ class PackageRepository():
     def __init__(self, name):
         self.name = name
         self.base_url = ''
-        self.packages_gz_url = ''
-        self.local_packages_gz = ''
+        self.repo_url = ''
+        self.index_file = ''
+        self.cache_dir = mkdtemp()
+        self.cache_uuid = uuid4()
         self.cache_threshold_sec = 60 * 60
         self.broken = False
         print("")
         print("New repository '{0}'".format(name))
+
+    def grep_package(self, name, pattern=None):
+        pass
+
+    def test_cache(self):
+        index_file_path = os.path.join(self.cache_dir, self.index_file)
+        if os.path.exists(index_file_path):
+            file_age = time.time() - os.path.getctime(index_file_path)
+            if file_age > self.cache_threshold_sec:
+                print("File '{0}' too old.".format(index_file_path))
+                return False
+        else:
+            print("No such file '{0}'".format(index_file_path))
+            return False
+
+        print("Cache is up-to-date (index file updated {0} sec ago).".format(file_age))
+        return True
+
+    def update_cache(self):
+        pass
+
+    def __str__(self):
+        index_file_url = '/'.join([self.repo_url, self.index_file])
+        index_file_path = os.path.join(self.cache_dir, self.index_file)
+
+        return "Remote URL: {0}, Cached file: {1}".format(
+            index_file_url,
+            index_file_path
+        )
+
+
+class DebPackageRepository(PackageRepository):
+    def __init__(self, name):
+        PackageRepository.__init__(self, name=name)
+        self.index_file = 'Packages.gz'
 
     def grep_package(self, name, pattern=None):
         pattern = pattern if pattern else "(^|-){0}$"
@@ -44,7 +83,7 @@ class PackageRepository():
                 line.rstrip().split(' ', 1)
                 for line in awk(
                     grep_dctrl(
-                        zcat(self.local_packages_gz),
+                        zcat(os.path.join(self.cache_dir, self.index_file)),
                             '-F', 'Package',
                             '-e', pattern.format(name),
                             '-s', 'Package,Version'
@@ -55,75 +94,164 @@ class PackageRepository():
         except:
             return []
 
-    def test_cache(self):
-        if self.local_packages_gz:
-            if os.path.exists(self.local_packages_gz):
-                file_age = time.time() - os.path.getctime(self.local_packages_gz)
-                if file_age > self.cache_threshold_sec:
-                    print("File '{0}' too old.".format(self.local_packages_gz))
-                    return False
-            else:
-                print("No such file '{0}'".format(self.local_packages_gz))
-                return False
-        else:
-            print("Local Packages.gz isn't defined yet.")
-            return False
-        print("Cached file is up-to-date (updated {0} sec ago).".format(file_age))
-        return True
-
     def update_cache(self):
         if not self.test_cache():
-            print("Downloading file ...")
-            self.local_packages_gz = mkdtemp() + "/Packages.gz"
+            rm(self.cache_dir, '-rf')
+            self.cache_dir = mkdtemp()
+
+            index_file_url = '/'.join([self.repo_url, self.index_file])
+            index_file_path = os.path.join(self.cache_dir, self.index_file)
+
             try:
-                wget(self.packages_gz_url, '-O', self.local_packages_gz)
+                print("Downloading index file '{0}' --> '{1}' ...".format(
+                    index_file_url, index_file_path
+                ))
+                wget(index_file_url, '-O', index_file_path)
             except:
                 self.broken = True
 
-    def __str__(self):
-        return "Remote URL: {0}, Cached file: {1}".format(
-            self.packages_gz_url,
-            self.local_packages_gz
-        )
+
+class RpmPackageRepository(PackageRepository):
+    def __init__(self, name):
+        PackageRepository.__init__(self, name=name)
+        self.index_file = 'repodata/repomd.xml'
+
+    def grep_package(self, name, pattern=None):
+        try:
+            package_list = []
+            found_items = [
+                line.rstrip()
+                for line in repoquery(
+                    "--repofrompath={0},{1}".format(self.cache_uuid, self.cache_dir),
+                    '--search', name)
+            ]
+
+            for item in found_items:
+                item_info = [
+                    line.rstrip()
+                    for line in repoquery(
+                        "--repofrompath={0},{1}".format(self.cache_uuid, self.cache_dir),
+                        '--info', item)
+                ]
+
+                pkg_info = {}
+                for record in item_info:
+                    try:
+                        key, value = record.rstrip().split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if key == 'Description':
+                            break
+                        pkg_info[key] = value
+                    except:
+                        continue
+                package_list.append([pkg_info['Name'], pkg_info['Version']])
+
+            return package_list
+        except:
+            return []
+
+    def update_cache(self):
+        if not self.test_cache():
+            rm(self.cache_dir, '-rf')
+            self.cache_dir = mkdtemp()
+            self.cache_uuid = uuid4()
+            mkdir(os.path.join(self.cache_dir, 'repodata'))
+
+            index_file_url = '/'.join([self.repo_url, self.index_file])
+            index_file_path = os.path.join(self.cache_dir, self.index_file)
+
+            try:
+                print("Downloading index file '{0}' --> '{1}' ...".format(
+                    index_file_url, index_file_path
+                ))
+                wget(index_file_url, '-O', index_file_path)
+            except:
+                self.broken = True
+                return
+
+            try:
+                xmlroot = etree.parse(index_file_path).getroot()
+                xmlns = xmlroot.nsmap[None]
+                for item in xmlroot.findall("{{{0}}}data".format(xmlns)):
+                    for subitem in item.findall("{{{0}}}location".format(xmlns)):
+                        location = subitem.get('href')
+                        url = '/'.join([self.repo_url, location])
+                        path = '/'.join([self.cache_dir, location])
+                        print("Downloading file '{0}' --> '{1}' ...".format(
+                            url, path
+                        ))
+                        wget(url, '-O', path)
+            except:
+                self.broken = True
 
 
-class MirantisOSCIRepository(PackageRepository):
+class MirantisOSCIRepository(DebPackageRepository):
     def __init__(self, name='Mirantis OSCI Repository', dist_name='ubuntu',
                  dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        PackageRepository.__init__(self, name=name)
+        DebPackageRepository.__init__(self, name=name)
         #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
         self.base_url = 'http://fuel-repository.mirantis.com/osci'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.packages_gz_url = "{0}/{1}-fuel-{2}-{3}/{1}/Packages.gz".format(
+        self.repo_url = "{0}/{1}-fuel-{2}-{3}/{1}".format(
             self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
 
 
-class MirantisPublicRepository(PackageRepository):
+class MirantisPublicRepository(DebPackageRepository):
     def __init__(self, name='Mirantis Public Repository', dist_name='ubuntu',
                  dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        PackageRepository.__init__(self, name=name)
+        DebPackageRepository.__init__(self, name=name)
         self.base_url = 'http://fuel-repository.mirantis.com/fwm'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.packages_gz_url = "{0}/{1}/{2}/dists/{3}/main/binary-amd64/Packages.gz".format(
+        self.repo_url = "{0}/{1}/{2}/dists/{3}/main/binary-amd64".format(
             self.base_url, fuel_release, dist_name, dist_release)
 
 
-class UbuntuPublicRepository(PackageRepository):
+class MirantisOSCIRpmRepository(RpmPackageRepository):
+    def __init__(self, name='Mirantis OSCI Rpm Repository', dist_name='centos',
+                 dist_release='', fuel_release='5.0', fuel_type='stable'):
+        RpmPackageRepository.__init__(self, name=name)
+        #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
+        self.base_url = 'http://fuel-repository.mirantis.com/osci'
+        self.dist_name = dist_name
+        self.dist_release = dist_release
+        self.fuel_release = fuel_release
+        self.fuel_type = fuel_type
+        self.repo_url = "{0}/{1}-fuel-{2}-{3}/{1}".format(
+            self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
+
+
+class MirantisPublicRpmRepository(RpmPackageRepository):
+    def __init__(self, name='Mirantis Public Rpm Repository', dist_name='centos',
+                 dist_release='', fuel_release='5.0', fuel_type='stable'):
+        RpmPackageRepository.__init__(self, name=name)
+        self.base_url = 'http://fuel-repository.mirantis.com/fwm'
+        self.dist_name = dist_name
+        self.dist_release = dist_release
+        self.fuel_release = fuel_release
+        self.fuel_type = fuel_type
+        self.repo_url = "{0}/{1}/{2}/os/x86_64".format(
+            self.base_url, fuel_release, dist_name)
+
+
+class UbuntuPublicRepository(DebPackageRepository):
     def __init__(self, name='Ubuntu Public Repository', dist_name='ubuntu',
                  dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        PackageRepository.__init__(self, name=name)
+        DebPackageRepository.__init__(self, name=name)
         self.base_url = 'http://ru.archive.ubuntu.com'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.packages_gz_url = "{0}/{1}/dists/{2}/main/binary-amd64/Packages.gz".format(
+        #self.packages_gz_url = "{0}/{1}/dists/{2}/main/binary-amd64/Packages.gz".format(
+        #    self.base_url, dist_name, dist_release)
+        self.repo_url = "{0}/{1}/dists/{2}/main/binary-amd64".format(
             self.base_url, dist_name, dist_release)
 
 
@@ -138,7 +266,7 @@ class PackageRepositorySet():
             print("Repository '{0}' is broken.".format(repository.name))
             return
 
-        print("Adding repository '{0}' ({1})".format(repository.name, repository.packages_gz_url))
+        print("Adding repository '{0}' ({1})".format(repository.name, repository.repo_url))
         self.repository_list.append(repository)
 
     def add_custom_packages(self, custom_package_set=None):
@@ -490,7 +618,7 @@ custom_python_packages.add(PackageAlias(name='WebOb').deb(name='python-webob'))
 
 parser = argparse.ArgumentParser(description="Resolve package dependencies")
 
-parser.add_argument('--greq-branch', dest='greq_branch', default='master',
+parser.add_argument('--greq-branch', dest='greq_branch', default='icehouse',
                     help='Global Requirements branch.')
 
 parser.add_argument('--git-dir', dest='git_dir', default='/home/dim/Temp/glance',
@@ -536,9 +664,9 @@ print("")
 
 repo_set = PackageRepositorySet()
 repo_set.add_custom_packages(custom_package_set=custom_python_packages)
-repo_set.add(MirantisOSCIRepository(fuel_release=args.fuel_release))
-repo_set.add(MirantisPublicRepository(fuel_release=args.fuel_release))
-repo_set.add(UbuntuPublicRepository(fuel_release=args.fuel_release))
+repo_set.add(MirantisOSCIRpmRepository(fuel_release=args.fuel_release))
+repo_set.add(MirantisPublicRpmRepository(fuel_release=args.fuel_release))
+#repo_set.add(UbuntuPublicRepository(fuel_release=args.fuel_release))
 
 print("")
 print("Searching packages for direct dependencies:")

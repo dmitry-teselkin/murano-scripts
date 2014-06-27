@@ -72,4 +72,5 @@ custom_python_packages.add(PackageAlias(name='Babel').deb(name='python-babel'))
 custom_python_packages.add(PackageAlias(name='PyYAML').deb(name='python-yaml'))
 custom_python_packages.add(PackageAlias(name='PrettyTable').deb(name='python-prettytable'))
 custom_python_packages.add(PackageAlias(name='pytz').deb(name='python-pytz'))
+custom_python_packages.add(PackageAlias(name='WebOb').deb(name='python-webob'))
 

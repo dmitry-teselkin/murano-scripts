@@ -6,7 +6,6 @@ import os
 from pushd import pushd
 from getpass import getuser
 
-
 from sh import python
 from sh import tail
 from sh import pip
@@ -39,7 +38,7 @@ class PackageRepository():
         self.cache_threshold_sec = 60 * 60
         self.broken = False
         print("")
-        print("New repository '{0}'".format(name))
+        print("Caching data for repository '{0}'".format(name))
 
     def grep_package(self, name, pattern=None):
         pass
@@ -71,7 +70,7 @@ class PackageRepository():
         )
 
 
-class DebPackageRepository(PackageRepository):
+class PackageRepositoryDeb(PackageRepository):
     def __init__(self, name):
         PackageRepository.__init__(self, name=name)
         self.index_file = 'Packages.gz'
@@ -84,10 +83,10 @@ class DebPackageRepository(PackageRepository):
                 for line in awk(
                     grep_dctrl(
                         zcat(os.path.join(self.cache_dir, self.index_file)),
-                            '-F', 'Package',
-                            '-e', pattern.format(name),
-                            '-s', 'Package,Version'
-                        ),
+                        '-F', 'Package',
+                        '-e', pattern.format(name),
+                        '-s', 'Package,Version'
+                    ),
                     '/Package/{p=$2;next} /Version/{print p " " $2}'
                 )
             ]
@@ -111,7 +110,7 @@ class DebPackageRepository(PackageRepository):
                 self.broken = True
 
 
-class RpmPackageRepository(PackageRepository):
+class PackageRepositoryRpm(PackageRepository):
     def __init__(self, name):
         PackageRepository.__init__(self, name=name)
         self.index_file = 'repodata/repomd.xml'
@@ -186,10 +185,10 @@ class RpmPackageRepository(PackageRepository):
                 self.broken = True
 
 
-class MirantisOSCIRepository(DebPackageRepository):
+class MirantisOSCIRepositoryDeb(PackageRepositoryDeb):
     def __init__(self, name='Mirantis OSCI Repository', dist_name='ubuntu',
                  dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        DebPackageRepository.__init__(self, name=name)
+        PackageRepositoryDeb.__init__(self, name=name)
         #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
         self.base_url = 'http://fuel-repository.mirantis.com/osci'
         self.dist_name = dist_name
@@ -200,10 +199,10 @@ class MirantisOSCIRepository(DebPackageRepository):
             self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
 
 
-class MirantisPublicRepository(DebPackageRepository):
+class MirantisPublicRepositoryDeb(PackageRepositoryDeb):
     def __init__(self, name='Mirantis Public Repository', dist_name='ubuntu',
                  dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        DebPackageRepository.__init__(self, name=name)
+        PackageRepositoryDeb.__init__(self, name=name)
         self.base_url = 'http://fuel-repository.mirantis.com/fwm'
         self.dist_name = dist_name
         self.dist_release = dist_release
@@ -213,10 +212,10 @@ class MirantisPublicRepository(DebPackageRepository):
             self.base_url, fuel_release, dist_name, dist_release)
 
 
-class MirantisOSCIRpmRepository(RpmPackageRepository):
+class MirantisOSCIRepositoryRpm(PackageRepositoryRpm):
     def __init__(self, name='Mirantis OSCI Rpm Repository', dist_name='centos',
                  dist_release='', fuel_release='5.0', fuel_type='stable'):
-        RpmPackageRepository.__init__(self, name=name)
+        PackageRepositoryRpm.__init__(self, name=name)
         #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
         self.base_url = 'http://fuel-repository.mirantis.com/osci'
         self.dist_name = dist_name
@@ -227,10 +226,10 @@ class MirantisOSCIRpmRepository(RpmPackageRepository):
             self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
 
 
-class MirantisPublicRpmRepository(RpmPackageRepository):
+class MirantisPublicRepositoryRpm(PackageRepositoryRpm):
     def __init__(self, name='Mirantis Public Rpm Repository', dist_name='centos',
                  dist_release='', fuel_release='5.0', fuel_type='stable'):
-        RpmPackageRepository.__init__(self, name=name)
+        PackageRepositoryRpm.__init__(self, name=name)
         self.base_url = 'http://fuel-repository.mirantis.com/fwm'
         self.dist_name = dist_name
         self.dist_release = dist_release
@@ -240,17 +239,28 @@ class MirantisPublicRpmRepository(RpmPackageRepository):
             self.base_url, fuel_release, dist_name)
 
 
-class UbuntuPublicRepository(DebPackageRepository):
-    def __init__(self, name='Ubuntu Public Repository', dist_name='ubuntu',
-                 dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        DebPackageRepository.__init__(self, name=name)
-        self.base_url = 'http://ru.archive.ubuntu.com'
+class UpstreamPublicRepositoryRpm(PackageRepositoryRpm):
+    def __init__(self, name='Upstream Public Rpm Repository', dist_name='centos',
+                 dist_release='6.5', fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryRpm.__init__(self, name=name)
+        self.base_url = 'http://mirror.yandex.ru'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        #self.packages_gz_url = "{0}/{1}/dists/{2}/main/binary-amd64/Packages.gz".format(
-        #    self.base_url, dist_name, dist_release)
+        self.repo_url = "{0}/{1}/{2}/os/x86_64".format(
+            self.base_url, dist_name, dist_release, dist_name)
+
+
+class UpstreamPublicRepositoryDeb(PackageRepositoryDeb):
+    def __init__(self, name='Ubuntu Public Repository', dist_name='ubuntu',
+                 dist_release='precise', fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryDeb.__init__(self, name=name)
+        self.base_url = 'http://mirror.yandex.ru'
+        self.dist_name = dist_name
+        self.dist_release = dist_release
+        self.fuel_release = fuel_release
+        self.fuel_type = fuel_type
         self.repo_url = "{0}/{1}/dists/{2}/main/binary-amd64".format(
             self.base_url, dist_name, dist_release)
 
@@ -258,7 +268,7 @@ class UbuntuPublicRepository(DebPackageRepository):
 class PackageRepositorySet():
     def __init__(self):
         self.repository_list = []
-        self.custom_package_set = None
+        self.custom_package_set = []
 
     def add(self, repository):
         repository.update_cache()
@@ -266,11 +276,12 @@ class PackageRepositorySet():
             print("Repository '{0}' is broken.".format(repository.name))
             return
 
-        print("Adding repository '{0}' ({1})".format(repository.name, repository.repo_url))
+        print("Registering repository '{0}' ({1})".format(repository.name, repository.repo_url))
         self.repository_list.append(repository)
 
     def add_custom_packages(self, custom_package_set=None):
-        self.custom_package_set = custom_package_set
+        if custom_package_set:
+            self.custom_package_set = custom_package_set
 
     def grep_package(self, name):
         for repository in self.repository_list:
@@ -280,6 +291,7 @@ class PackageRepositorySet():
                 pattern = "{0}"
             for p, v in repository.grep_package(name=name, pattern=pattern):
                 yield repository, p, v
+
 
 #===========================
 
@@ -581,7 +593,21 @@ class ReportGenerator():
 
         print("Total: {0}".format(count))
 
-    def validation_report(self, validation_result):
+    def package_validation_report_block(self, validation_result=None, repository_set=None, direct=True):
+        str_direct = 'direct' if direct else 'indirect'
+        self._top_block_delimiter('Searching packages for {0} dependencies:'.format(str_direct))
+
+        for key in sorted(validation_result.keys()):
+            item = validation_result[key]
+            if item['is_direct_dependency'] == direct:
+                print("")
+                print("*** {0} ({1}):".format(item['orig_package'], item['greq_package']))
+                for r, p, v in repository_set.grep_package(item['orig_package'].name):
+                    print("{0}: '{1} {2}'".format(r.name, p, v))
+
+        self._bottom_block_delimiter()
+
+    def global_requirements_validation(self, validation_result):
         print("")
         print("Report for package '{0}':".format(self.package_name))
 
@@ -594,6 +620,14 @@ class ReportGenerator():
         self.print_report_block(validation_result=validation_result,
                                 compatible=False, direct=False)
 
+    def package_matching(self, validation_result=None, repository_set=None):
+        print("")
+        print("Looking for packages matching:")
+        self.package_validation_report_block(validation_result=validation_result,
+                                             repository_set=repository_set, direct=True)
+        self.package_validation_report_block(validation_result=validation_result,
+                                             repository_set=repository_set, direct=False)
+        print("")
 
 #===============================================================================
 
@@ -618,14 +652,26 @@ custom_python_packages.add(PackageAlias(name='WebOb').deb(name='python-webob'))
 
 parser = argparse.ArgumentParser(description="Resolve package dependencies")
 
-parser.add_argument('--greq-branch', dest='greq_branch', default='icehouse',
-                    help='Global Requirements branch.')
-
 parser.add_argument('--git-dir', dest='git_dir', default='/home/dim/Temp/glance',
                     help='Local GIT repository path.')
 
+parser.add_argument('--greq-branch', dest='greq_branch', default='icehouse',
+                    help='Global Requirements branch.')
+
 parser.add_argument('--fuel-release', dest='fuel_release', default='5.0.1',
                     help='Current FUEL release.')
+
+parser.add_argument('--rpm', dest='check_rpm_packages', action='store_true')
+parser.add_argument('--rpm-os-version', dest='rpm_os_version', default='centos')
+parser.add_argument('--rpm-os-release', dest='rpm_os_release', default='6.5')
+
+parser.add_argument('--deb', dest='check_deb_packages', action='store_true')
+parser.add_argument('--deb-os-version', dest='deb_os_version', default='ubuntu')
+parser.add_argument('--deb-os-release', dest='deb_os_release', default='precise')
+
+parser.add_argument('--mirantis-osci', dest='use_mirantis_osci_repo', action='store_true')
+parser.add_argument('--mirantis-public', dest='use_mirantis_public_repo', action='store_true')
+parser.add_argument('--upstream-public', dest='use_upstream_public_repo', action='store_true')
 
 args = parser.parse_args()
 
@@ -635,7 +681,7 @@ greq_branch = {
     'icehouse': 'stable/icehouse'
 }.get(args.greq_branch, args.greq_branch)
 
-greq_url="https://raw.githubusercontent.com/openstack/requirements/{0}/global-requirements.txt".format(greq_branch)
+greq_url = "https://raw.githubusercontent.com/openstack/requirements/{0}/global-requirements.txt".format(greq_branch)
 
 print("""
 SUMMARY:
@@ -652,45 +698,36 @@ Target FUEL release: {3}
 
 greq = GlobalRequirements(greq_url)
 
+repo_set = PackageRepositorySet()
+repo_set.add_custom_packages(custom_package_set=custom_python_packages)
+
+if args.check_rpm_packages:
+    if args.use_mirantis_osci_repo:
+        repo_set.add(MirantisOSCIRepositoryRpm(fuel_release=args.fuel_release))
+    if args.use_mirantis_public_repo:
+        repo_set.add(MirantisPublicRepositoryRpm(fuel_release=args.fuel_release))
+    if args.use_upstream_public_repo:
+        repo_set.add(UpstreamPublicRepositoryRpm(fuel_release=args.fuel_release))
+
+if args.check_deb_packages:
+    if args.use_mirantis_osci_repo:
+        repo_set.add(MirantisOSCIRepositoryDeb(fuel_release=args.fuel_release))
+    if args.use_mirantis_public_repo:
+        repo_set.add(MirantisPublicRepositoryDeb(fuel_release=args.fuel_release))
+    if args.use_upstream_public_repo:
+        repo_set.add(UpstreamPublicRepositoryDeb(fuel_release=args.fuel_release))
+
 reqs = RequirementsResolver()
 reqs.resolve_from_dir(args.git_dir)
 
 validation_result = reqs.validate(greq)
 
 report = ReportGenerator(package_name=reqs.package_name)
-report.validation_report(validation_result=validation_result)
+report.global_requirements_validation(validation_result=validation_result)
 
-print("")
-
-repo_set = PackageRepositorySet()
-repo_set.add_custom_packages(custom_package_set=custom_python_packages)
-repo_set.add(MirantisOSCIRpmRepository(fuel_release=args.fuel_release))
-repo_set.add(MirantisPublicRpmRepository(fuel_release=args.fuel_release))
-#repo_set.add(UbuntuPublicRepository(fuel_release=args.fuel_release))
-
-print("")
-print("Searching packages for direct dependencies:")
-print("===========================================")
-for key in sorted(validation_result.keys()):
-    item = validation_result[key]
-    if item['is_direct_dependency']:
-        print("")
-        print("*** {0} ({1}):".format(item['orig_package'], item['greq_package']))
-        for r, p, v in repo_set.grep_package(item['orig_package'].name):
-            print("{0}: '{1} {2}'".format(r.name, p, v))
-
-print("")
-print("Searching packages for indirect dependencies:")
-print("=============================================")
-for key in sorted(validation_result.keys()):
-    item = validation_result[key]
-    if not item['is_direct_dependency']:
-        print("")
-        print("*** {0} ({1}):".format(item['orig_package'], item['greq_package']))
-        for r, p, v in repo_set.grep_package(item['orig_package'].name):
-            print("{0}: '{1} {2}'".format(r.name, p, v))
-
-print("")
+if args.check_deb_packages or args.check_rpm_packages:
+    report.package_matching(validation_result=validation_result,
+                            repository_set=repo_set)
 
 # Example of produced output:
 # http://paste.openstack.org/show/85047/

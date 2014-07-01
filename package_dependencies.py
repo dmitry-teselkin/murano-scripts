@@ -655,7 +655,7 @@ parser = argparse.ArgumentParser(description="Resolve package dependencies")
 parser.add_argument('--git-dir', dest='git_dir', default='/home/dim/Temp/glance',
                     help='Local GIT repository path.')
 
-parser.add_argument('--greq-branch', dest='greq_branch', default='icehouse',
+parser.add_argument('--greq-branch', dest='greq_branch', default='master',
                     help='Global Requirements branch.')
 
 parser.add_argument('--fuel-release', dest='fuel_release', default='5.0.1',

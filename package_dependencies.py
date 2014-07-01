@@ -661,17 +661,26 @@ parser.add_argument('--greq-branch', dest='greq_branch', default='icehouse',
 parser.add_argument('--fuel-release', dest='fuel_release', default='5.0.1',
                     help='Current FUEL release.')
 
-parser.add_argument('--rpm', dest='check_rpm_packages', action='store_true')
-parser.add_argument('--rpm-os-version', dest='rpm_os_version', default='centos')
-parser.add_argument('--rpm-os-release', dest='rpm_os_release', default='6.5')
+parser.add_argument('--rpm', dest='check_rpm_packages', action='store_true',
+                    help='Search for RPM packages matching the requirements.')
+parser.add_argument('--rpm-os-version', dest='rpm_os_version', default='centos',
+                    help='Specify OS name for RPM package repository.')
+parser.add_argument('--rpm-os-release', dest='rpm_os_release', default='6.5',
+                    help='Specify OS release name for RPM package repository.')
 
-parser.add_argument('--deb', dest='check_deb_packages', action='store_true')
-parser.add_argument('--deb-os-version', dest='deb_os_version', default='ubuntu')
-parser.add_argument('--deb-os-release', dest='deb_os_release', default='precise')
+parser.add_argument('--deb', dest='check_deb_packages', action='store_true',
+                    help='Search for DEB packages matching the requirements.')
+parser.add_argument('--deb-os-version', dest='deb_os_version', default='ubuntu',
+                    help='Specify OS name for DEB package repository.')
+parser.add_argument('--deb-os-release', dest='deb_os_release', default='precise',
+                    help='Specify OS release name for DEB package repository.')
 
-parser.add_argument('--mirantis-osci', dest='use_mirantis_osci_repo', action='store_true')
-parser.add_argument('--mirantis-public', dest='use_mirantis_public_repo', action='store_true')
-parser.add_argument('--upstream-public', dest='use_upstream_public_repo', action='store_true')
+parser.add_argument('--mirantis-osci', dest='use_mirantis_osci_repo', action='store_true',
+                    help='Use Mirantis OSCI repository for package search.')
+parser.add_argument('--mirantis-public', dest='use_mirantis_public_repo', action='store_true',
+                    help='Use Mirantis Public repository for package search.')
+parser.add_argument('--upstream-public', dest='use_upstream_public_repo', action='store_true',
+                    help='Use upstream (DEB or RPM) repository for package search.')
 
 args = parser.parse_args()
 

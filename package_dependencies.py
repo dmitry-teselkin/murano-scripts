@@ -185,63 +185,107 @@ class PackageRepositoryRpm(PackageRepository):
                 self.broken = True
 
 
-class MirantisOSCIRepositoryDeb(PackageRepositoryDeb):
-    def __init__(self, name='Mirantis OSCI Repository', dist_name='ubuntu',
-                 dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        PackageRepositoryDeb.__init__(self, name=name)
-        #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
-        self.base_url = 'http://fuel-repository.mirantis.com/osci'
+class MirantisInternalRepositoryDeb(PackageRepositoryDeb):
+    def __init__(self, name='Mirantis Internal DEB Repository', repo_type='product',
+                 dist_name='ubuntu', dist_release='precise',
+                 fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryDeb.__init__(self, name="{0} ({1})".format(name, repo_type))
+        self.base_url = 'http://osci-obs.vm.mirantis.net:82'
+        self.base_url_suffix = 'osci'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.repo_url = "{0}/{1}-fuel-{2}-{3}/{1}".format(
-            self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
+
+        if repo_type == 'master':
+            build_suffix = "{0}-fuel-master".format(self.dist_name)
+        else:
+            build_suffix = "{0}-fuel-{1}-{2}".format(self.dist_name, self.fuel_release, self.fuel_type)
+
+        self.repo_url = "{0}/{1}/{2}".format(
+            self.base_url, build_suffix, self.dist_name)
 
 
 class MirantisPublicRepositoryDeb(PackageRepositoryDeb):
-    def __init__(self, name='Mirantis Public Repository', dist_name='ubuntu',
-                 dist_release='precise', fuel_release='5.0', fuel_type='stable'):
-        PackageRepositoryDeb.__init__(self, name=name)
-        self.base_url = 'http://fuel-repository.mirantis.com/fwm'
+    def __init__(self, name='Mirantis Public DEB Repo', repo_type='product',
+                 dist_name='ubuntu', dist_release='precise',
+                 fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryDeb.__init__(self, name="{0} ({1})".format(name, repo_type))
+        self.base_url = 'http://fuel-repository.mirantis.com'
+        self.base_url_suffix = 'fwm'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.repo_url = "{0}/{1}/{2}/dists/{3}/main/binary-amd64".format(
-            self.base_url, fuel_release, dist_name, dist_release)
+
+        if repo_type == 'osci':
+            self.base_url_suffix = 'osci'
+            build_suffix = "{0}-fuel-{1}-{2}/{0}".format(
+                self.dist_name, self.fuel_release, self.fuel_type)
+        else:
+            self.base_url_suffix = 'fwm'
+            build_suffix = "{0}/{1}/dists/{2}/main/binary-amd64".format(
+                self.fuel_release, self.dist_name, dist_release)
+
+        self.repo_url = "{0}/{1}/{2}".format(
+            self.base_url, self.base_url_suffix, build_suffix)
 
 
-class MirantisOSCIRepositoryRpm(PackageRepositoryRpm):
-    def __init__(self, name='Mirantis OSCI Rpm Repository', dist_name='centos',
-                 dist_release='', fuel_release='5.0', fuel_type='stable'):
-        PackageRepositoryRpm.__init__(self, name=name)
-        #self.base_url = 'http://osci-obs.vm.mirantis.net:82'
-        self.base_url = 'http://fuel-repository.mirantis.com/osci'
+class MirantisInternalRepositoryRpm(PackageRepositoryRpm):
+    def __init__(self, name='Mirantis Internal RPM Repo', repo_type='product',
+                 dist_name='centos', dist_release='',
+                 fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryRpm.__init__(self, name="{0} ({1})".format(name, repo_type))
+        self.base_url = 'http://osci-obs.vm.mirantis.net:82'
+        self.base_url_suffix = 'osci'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.repo_url = "{0}/{1}-fuel-{2}-{3}/{1}".format(
-            self.base_url, self.dist_name, self.fuel_release, self.fuel_type)
+
+        if repo_type == 'master':
+            build_suffix = "{0}-fuel-master".format(self.dist_name)
+        else:
+            build_suffix = "{0}-fuel-{1}-{2}".format(self.dist_name, self.fuel_release, self.fuel_type)
+
+        self.repo_url = "{0}/{1}/{2}".format(
+            self.base_url, build_suffix, self.dist_name)
 
 
 class MirantisPublicRepositoryRpm(PackageRepositoryRpm):
-    def __init__(self, name='Mirantis Public Rpm Repository', dist_name='centos',
-                 dist_release='', fuel_release='5.0', fuel_type='stable'):
-        PackageRepositoryRpm.__init__(self, name=name)
-        self.base_url = 'http://fuel-repository.mirantis.com/fwm'
+    def __init__(self, name='Mirantis Public RPM Repo', repo_type='product',
+                 dist_name='centos', dist_release='',
+                 fuel_release='5.0', fuel_type='stable'):
+        PackageRepositoryRpm.__init__(self, name="{0} ({1})".format(name, repo_type))
+
+        self.base_url = 'http://fuel-repository.mirantis.com'
+        self.base_url_suffix = 'fwm'
         self.dist_name = dist_name
         self.dist_release = dist_release
         self.fuel_release = fuel_release
         self.fuel_type = fuel_type
-        self.repo_url = "{0}/{1}/{2}/os/x86_64".format(
-            self.base_url, fuel_release, dist_name)
+
+        if repo_type == 'osci':
+            self.base_url_suffix = 'osci'
+            build_suffix = "{0}-fuel-{1}-{2}/{0}".format(
+                self.dist_name, self.fuel_release, self.fuel_type)
+        elif repo_type == 'master':
+            self.base_url_suffix = 'repos'
+            build_suffix = "{0}-fuel-master/{0}".format(self.dist_name)
+        else:
+            # Use product configuration by default
+            self.base_url_suffix = 'fwm'
+            build_suffix = "{0}/{1}/os/x86_64".format(
+                self.fuel_release, self.dist_name)
+
+        self.repo_url = "{0}/{1}/{2}".format(
+            self.base_url, self.base_url_suffix, build_suffix)
 
 
 class UpstreamPublicRepositoryRpm(PackageRepositoryRpm):
-    def __init__(self, name='Upstream Public Rpm Repository', dist_name='centos',
-                 dist_release='6.5', fuel_release='5.0', fuel_type='stable'):
+    def __init__(self, name='Upstream Public Rpm Repo',
+                 dist_name='centos', dist_release='6.5',
+                 fuel_release='5.0', fuel_type='stable'):
         PackageRepositoryRpm.__init__(self, name=name)
         self.base_url = 'http://mirror.yandex.ru'
         self.dist_name = dist_name
@@ -502,7 +546,7 @@ class RequirementsResolver():
             self.package_name = tail(python("setup.py", "--name"), "-1").rstrip()
 
             print("")
-            print("Calculating package requirements ...")
+            print("Gathering package requirements ...")
             for line in pip('install', self._pip_install_opts, '.'):
                 string = line.rstrip()
                 match = re.search(
@@ -531,7 +575,7 @@ class RequirementsResolver():
     def validate(self, global_requirements):
         """
         Returns a dict of dicts:
-            {
+            <package name>: {
                 'orig_package': <package found in component's requirements>,
                 'greq_package': <package found in global requirements>,
                 'status': <if package complies with global requirements>,
@@ -593,19 +637,44 @@ class ReportGenerator():
 
         print("Total: {0}".format(count))
 
-    def package_validation_report_block(self, validation_result=None, repository_set=None, direct=True):
+    def print_machine_friendly_report_block(self, validation_result, compatible=False, direct=False):
         str_direct = 'direct' if direct else 'indirect'
-        self._top_block_delimiter('Searching packages for {0} dependencies:'.format(str_direct))
+        str_compatible = 'compatible' if compatible else 'incompatible'
+        delimiter = ";"
+
+        print("#")
+        for key in sorted(validation_result.keys()):
+            item = validation_result[key]
+            if item['status'] == compatible and item['is_direct_dependency'] == direct:
+                str_parents = " -> ".join([str(p) for p in item['orig_package'].parents])
+
+                print("{1:35}{0}{2:15}{0}{3:10}{0}{4:35}{0}{5}".format(
+                    delimiter,
+                    item['greq_package'],
+                    str_compatible,
+                    str_direct,
+                    item['orig_package'],
+                    str_parents
+                ))
+
+    def package_matching_report_block(self, validation_result=None, repository_set=None, direct=True):
+        str_direct = 'direct' if direct else 'indirect'
 
         for key in sorted(validation_result.keys()):
             item = validation_result[key]
             if item['is_direct_dependency'] == direct:
-                print("")
-                print("*** {0} ({1}):".format(item['orig_package'], item['greq_package']))
+                str_orig_package = str(item['orig_package'].name)
+                str_greq_package = str(item['greq_package'])
+                print("# {0}".format(item['orig_package']))
                 for r, p, v in repository_set.grep_package(item['orig_package'].name):
-                    print("{0}: '{1} {2}'".format(r.name, p, v))
-
-        self._bottom_block_delimiter()
+                    print("{1:25}{0}{2:10}{0}{3:35}{0}{4:40}{0}{5}".format(
+                        ';',
+                        str_orig_package,
+                        str_direct,
+                        str_greq_package,
+                        ' '.join([p, v]),
+                        r.name
+                    ))
 
     def global_requirements_validation(self, validation_result):
         print("")
@@ -614,18 +683,38 @@ class ReportGenerator():
         self.print_report_block(validation_result=validation_result,
                                 compatible=True, direct=True)
         self.print_report_block(validation_result=validation_result,
-                                compatible=True, direct=False)
-        self.print_report_block(validation_result=validation_result,
                                 compatible=False, direct=True)
         self.print_report_block(validation_result=validation_result,
+                                compatible=True, direct=False)
+        self.print_report_block(validation_result=validation_result,
                                 compatible=False, direct=False)
+
+    def machine_friendly_report(self, validation_result):
+        print("")
+        print("#{1:35}{0}{2:15}{0}{3:10}{0}{4:35}{0}{5}".format(
+            ';',
+            'Global Requirements',
+            'Is Compatible',
+            'Is Direct Dependency',
+            'Component Requirements',
+            'Required By'
+        ))
+        self.print_machine_friendly_report_block(validation_result=validation_result,
+                                                 compatible=True, direct=True)
+        self.print_machine_friendly_report_block(validation_result=validation_result,
+                                                 compatible=False, direct=True)
+        self.print_machine_friendly_report_block(validation_result=validation_result,
+                                                 compatible=True, direct=False)
+        self.print_machine_friendly_report_block(validation_result=validation_result,
+                                                 compatible=False, direct=False)
+        print("")
 
     def package_matching(self, validation_result=None, repository_set=None):
         print("")
         print("Looking for packages matching:")
-        self.package_validation_report_block(validation_result=validation_result,
+        self.package_matching_report_block(validation_result=validation_result,
                                              repository_set=repository_set, direct=True)
-        self.package_validation_report_block(validation_result=validation_result,
+        self.package_matching_report_block(validation_result=validation_result,
                                              repository_set=repository_set, direct=False)
         print("")
 
@@ -675,11 +764,14 @@ parser.add_argument('--deb-os-version', dest='deb_os_version', default='ubuntu',
 parser.add_argument('--deb-os-release', dest='deb_os_release', default='precise',
                     help='Specify OS release name for DEB package repository.')
 
-parser.add_argument('--mirantis-osci', dest='use_mirantis_osci_repo', action='store_true',
-                    help='Use Mirantis OSCI repository for package search.')
-parser.add_argument('--mirantis-public', dest='use_mirantis_public_repo', action='store_true',
-                    help='Use Mirantis Public repository for package search.')
-parser.add_argument('--upstream-public', dest='use_upstream_public_repo', action='store_true',
+parser.add_argument('--repo-type', dest='mirantis_repo_type', default='product',
+                    help='Mirantis repository for package search.')
+
+parser.add_argument('--internal', dest='use_internal_mirantis_repo', action='store_true',
+                    help='Use internal Mirantis repository for package search.')
+parser.add_argument('--public', dest='use_public_mirantis_repo', action='store_true',
+                    help='Use public Mirantis repository for package search.')
+parser.add_argument('--upstream', dest='use_upstream_public_repo', action='store_true',
                     help='Use upstream (DEB or RPM) repository for package search.')
 
 args = parser.parse_args()
@@ -707,36 +799,44 @@ Target FUEL release: {3}
 
 greq = GlobalRequirements(greq_url)
 
-repo_set = PackageRepositorySet()
-repo_set.add_custom_packages(custom_package_set=custom_python_packages)
-
-if args.check_rpm_packages:
-    if args.use_mirantis_osci_repo:
-        repo_set.add(MirantisOSCIRepositoryRpm(fuel_release=args.fuel_release))
-    if args.use_mirantis_public_repo:
-        repo_set.add(MirantisPublicRepositoryRpm(fuel_release=args.fuel_release))
-    if args.use_upstream_public_repo:
-        repo_set.add(UpstreamPublicRepositoryRpm(fuel_release=args.fuel_release))
-
-if args.check_deb_packages:
-    if args.use_mirantis_osci_repo:
-        repo_set.add(MirantisOSCIRepositoryDeb(fuel_release=args.fuel_release))
-    if args.use_mirantis_public_repo:
-        repo_set.add(MirantisPublicRepositoryDeb(fuel_release=args.fuel_release))
-    if args.use_upstream_public_repo:
-        repo_set.add(UpstreamPublicRepositoryDeb(fuel_release=args.fuel_release))
-
 reqs = RequirementsResolver()
 reqs.resolve_from_dir(args.git_dir)
 
 validation_result = reqs.validate(greq)
 
 report = ReportGenerator(package_name=reqs.package_name)
-report.global_requirements_validation(validation_result=validation_result)
+report.machine_friendly_report(validation_result=validation_result)
 
-if args.check_deb_packages or args.check_rpm_packages:
+repo_set = PackageRepositorySet()
+repo_set.add_custom_packages(custom_package_set=custom_python_packages)
+
+validate_packages = False
+if args.check_rpm_packages:
+    validate_packages = True
+    if args.use_internal_mirantis_repo:
+        repo_set.add(MirantisInternalRepositoryRpm(
+            repo_type=args.mirantis_repo_type, fuel_release=args.fuel_release))
+    if args.use_public_mirantis_repo:
+        repo_set.add(MirantisPublicRepositoryRpm(
+            repo_type=args.mirantis_repo_type, fuel_release=args.fuel_release))
+    if args.use_upstream_public_repo:
+        repo_set.add(UpstreamPublicRepositoryRpm(fuel_release=args.fuel_release))
+
+if args.check_deb_packages:
+    validate_packages = True
+    if args.use_internal_mirantis_repo:
+        repo_set.add(MirantisInternalRepositoryDeb(
+            repo_type=args.mirantis_repo_type, fuel_release=args.fuel_release))
+    if args.use_public_mirantis_repo:
+        repo_set.add(MirantisPublicRepositoryDeb(
+            repo_type=args.mirantis_repo_type, fuel_release=args.fuel_release))
+    if args.use_upstream_public_repo:
+        repo_set.add(UpstreamPublicRepositoryDeb(fuel_release=args.fuel_release))
+
+if validate_packages:
     report.package_matching(validation_result=validation_result,
                             repository_set=repo_set)
+
 
 # Example of produced output:
 # http://paste.openstack.org/show/85047/

@@ -61,9 +61,10 @@ fi
 #It contains credentials to access RabbitMQ and an OpenStack lab
 source ~/credentials
 
-BUILD_NUMBER=${BUILD_NUMBER:-777}
-MURANO_RABBITMQ_USERNAME="murano$BUILD_NUMBER"
-MURANO_RABBITMQ_VHOST="murano$BUILD_NUMBER"
+
+MURANO_DASHBOARD_REPO=${ZUUL_URL}/stackforge/murano-dashboard
+MURANO_DASHBOARD_BRANCH=${ZUUL_REF:-'master'}
+
 
 #Functions:
 

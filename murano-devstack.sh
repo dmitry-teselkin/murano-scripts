@@ -159,6 +159,8 @@ function run_tests() {
     local retval=0
     local tests_dir=$TESTS_DIR
 
+    sudo rm -f /tmp/parser_table.py
+
     cd ${tests_dir}/functionaltests
     $NOSETESTS_CMD sanity_check --nologcapture |:
 

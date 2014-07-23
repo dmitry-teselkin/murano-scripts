@@ -1,4 +1,5 @@
-opyright (c) 2014 Mirantis, Inc.
+#!/bin/bash
+# Copyright (c) 2014 Mirantis, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -44,7 +45,7 @@ PIP_CMD=$(which pip)
 SCREEN_CMD=$(which screen)
 FW_CMD=$(which iptables)
 DISPLAY_NUM=22
-STORE_AS_ARTIFACTS="${WORKSPACE}/murano-dashboard/functionaltests/screenshots /tmp/murano*.log /var/log/murano-dashboard/ /var/log/murano/"
+STORE_AS_ARTIFACTS="${WORKSPACE}/murano-dashboard/functionaltests/screenshots /tmp/murano*.log"
 
 get_os
 
@@ -60,9 +61,8 @@ fi
 #It contains credentials to access RabbitMQ and an OpenStack lab
 source ~/credentials
 
-BUILD_NUMBER=${BUILD_NUMBER:-777}
-MURANO_RABBITMQ_USERNAME="murano$BUILD_NUMBER"
-MURANO_RABBITMQ_VHOST="murano$BUILD_NUMBER"
+ZUUL_URL=${ZUUL_URL:-'https://github.com'}
+ZUUL_REF=${ZUUL_REF:-'master'}
 
 #Functions:
 
@@ -127,7 +127,7 @@ function prepare_tests() {
         return 1
     fi
 
-    sudo chown -R $USER $tests_dir
+    sudo chown -R $USER ${tests_dir}/functionaltests
 
     cd $tests_dir
 
@@ -159,12 +159,13 @@ function run_tests() {
     local retval=0
     local tests_dir=$TESTS_DIR
 
-    cd ${tests_dir}/functionaltests
-    $NOSETESTS_CMD sanity_check --nologcapture
+    sudo rm -f /tmp/parser_table.py
 
-    if [ $? -ne 0 ]; then
+    cd ${tests_dir}/functionaltests
+    $NOSETESTS_CMD sanity_check --nologcapture |:
+
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
         collect_artifacts $STORE_AS_ARTIFACTS
-        handle_rabbitmq del
         retval=1
     else
         collect_artifacts $STORE_AS_ARTIFACTS
@@ -190,7 +191,9 @@ function collect_artifacts() {
         fi
     done
 
-    sudo chown -R jenkins:jenkins $WORKSPACE/artifacts/*
+    sudo cp /opt/stack/logs/*.log ${destination}/
+
+    sudo chown -R jenkins:jenkins ${destination}/*
 }
 
 
@@ -225,6 +228,8 @@ MURANO_RABBIT_VHOST=/
 RECLONE=True
 SCREEN_LOGDIR=/opt/stack/log/
 LOGFILE=\$SCREEN_LOGDIR/stack.sh.log
+MURANO_DASHBOARD_REPO=${ZUUL_URL}/stackforge/murano-dashboard
+MURANO_DASHBOARD_BRANCH=${ZUUL_REF}
 ENABLED_SERVICES=
 enable_service mysql
 enable_service rabbit
@@ -262,7 +267,8 @@ function configure_apt_cacher() {
 
 #Starting up:
 WORKSPACE=$(cd $WORKSPACE && pwd)
-TESTS_DIR="${WORKSPACE}/murano-dashboard"
+
+TESTS_DIR="/opt/stack/murano-dashboard"
 
 sudo sh -c "echo '127.0.0.1 $(hostname)' >> /etc/hosts"
 

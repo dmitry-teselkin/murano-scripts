@@ -188,11 +188,13 @@ function collect_artifacts() {
 
     sudo mkdir -p $destination
 
-    for src_element in $sources; do
-        if [ -d "${src_element}" ]; then
-            sudo cp -R ${src_element}/* ${destination}/
-        else
-            sudo cp -R ${src_element} ${destination}/
+    for src in $sources; do
+        if [ -e "${src}" ]; then
+            if [ -d "${src}" ]; then
+                sudo cp -R ${src}/* ${destination}/
+            else
+                sudo cp -R ${src} ${destination}/
+            fi
         fi
     done
 

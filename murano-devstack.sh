@@ -138,6 +138,8 @@ function prepare_tests() {
         horizon_suffix="dashboard"
     fi
 
+    horizon_suffix=''
+
     iniset 'common' 'keystone_url' "$(shield_slashes http://${KEYSTONE_URL}:5000/v2.0/)" "$tests_config"
     iniset 'common' 'horizon_url' "$(shield_slashes http://${found_ip_address}/${horizon_suffix})" "$tests_config"
     iniset 'common' 'murano_url' "$(shield_slashes http://${found_ip_address}:8082)" "$tests_config"

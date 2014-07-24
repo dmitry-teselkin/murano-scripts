@@ -45,7 +45,7 @@ PIP_CMD=$(which pip)
 SCREEN_CMD=$(which screen)
 FW_CMD=$(which iptables)
 DISPLAY_NUM=22
-STORE_AS_ARTIFACTS="${WORKSPACE}/murano-dashboard/functionaltests/screenshots /tmp/murano*.log"
+STORE_AS_ARTIFACTS="/tmp/murano-artifacts ${WORKSPACE}/murano-dashboard/functionaltests/screenshots /tmp/murano*.log"
 
 get_os
 
@@ -152,6 +152,9 @@ function prepare_tests() {
     prepare_incubator_at $(pwd) || retval=$?
 
     cd $WORKSPACE
+
+    mkdir -p /tmp/murano-artifacts
+    chmod -R 777 /tmp/murano-artifacts
 
     return $retval
 }

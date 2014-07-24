@@ -217,11 +217,13 @@ function deploy_devstack() {
     cd "$git_dir/openstack-dev/devstack"
     cat << EOF > local.conf
 [[local|localrc]]
-HOST_IP=${KEYSTONE_URL}     # IP address of OpenStack lab
-ADMIN_PASSWORD=.            # This value doesn't matter
-MYSQL_PASSWORD=swordfish    # Random password for MySQL installation
-SERVICE_PASSWORD=swordfish  # Password of 'murano' service user
-SERVICE_TOKEN=.             # This value doesn't matter
+HOST_IP=${KEYSTONE_URL}             # IP address of OpenStack lab
+ADMIN_PASSWORD=.                    # This value doesn't matter
+MYSQL_PASSWORD=swordfish            # Random password for MySQL installation
+SERVICE_PASSWORD=${ADMIN_PASSWORD}  # Password of service user
+SERVICE_TOKEN=.                     # This value doesn't matter
+SERVICE_TENANT_NAME=${ADMIN_TENANT}
+MURANO_ADMIN_USER=${ADMIN_USERNAME}
 RABBIT_HOST=localhost
 RABBIT_PASSWORD=guest
 MURANO_RABBIT_VHOST=/

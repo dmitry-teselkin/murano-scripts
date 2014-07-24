@@ -189,18 +189,18 @@ function collect_artifacts() {
     sudo mkdir -p $destination
 
     for src in $sources; do
-        if [ -e "${src}" ]; then
-            if [ -d "${src}" ]; then
-                sudo cp -R ${src}/* ${destination}/
+        if [ -e ${src} ]; then
+            if [ -d ${src} ]; then
+                sudo rsync -v -r ${src}/ ${destination}
             else
-                sudo cp -R ${src} ${destination}/
+                sudo rsync -v -r ${src} ${destination}
             fi
         fi
     done
 
-    sudo cp /opt/stack/logs/*.log ${destination}/
+    sudo cp /opt/stack/logs/*.log ${destination} |:
 
-    sudo chown -R jenkins:jenkins ${destination}/*
+    sudo chown -R jenkins:jenkins ${destination}
 }
 
 

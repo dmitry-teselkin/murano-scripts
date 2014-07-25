@@ -134,7 +134,7 @@ function prepare_tests() {
     local tests_config=${tests_dir}/functionaltests/config/config_file.conf
 
     iniset 'common' 'keystone_url' "$(shield_slashes http://${KEYSTONE_URL}:5000/v2.0/)" "$tests_config"
-    iniset 'common' 'horizon_url' "$(shield_slashes http://${found_ip_address})" "$tests_config"
+    iniset 'common' 'horizon_url' "$(shield_slashes http://${found_ip_address}/)" "$tests_config"
     iniset 'common' 'murano_url' "$(shield_slashes http://${found_ip_address}:8082)" "$tests_config"
     iniset 'common' 'user' "$ADMIN_USERNAME" "$tests_config"
     iniset 'common' 'password' "$ADMIN_PASSWORD" "$tests_config"

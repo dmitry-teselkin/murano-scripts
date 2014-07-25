@@ -160,7 +160,7 @@ function run_tests() {
     sudo rm -f /tmp/parser_table.py
 
     cd ${tests_dir}/functionaltests
-    PYTHONPATH=/opt/stack/murano-dashboard $NOSETESTS_CMD sanity_check --nologcapture |:
+    $NOSETESTS_CMD sanity_check -sv |:
 
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         collect_artifacts $STORE_AS_ARTIFACTS

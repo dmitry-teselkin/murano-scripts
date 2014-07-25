@@ -191,7 +191,9 @@ function collect_artifacts() {
         fi
     done
 
-    sudo cp /opt/stack/logs/*.log ${destination} |:
+    sudo rsync --verbose --recursive --include='*.log' --exclude='*' /opt/stack/log ${destination}
+
+#    sudo cp /opt/stack/logs/*.log ${destination} |:
 
     sudo chown -R jenkins:jenkins ${destination}
 }
@@ -238,7 +240,7 @@ enable_service rabbit
 enable_service horizon
 enable_service murano
 enable_service murano-api
-#enable_service murano-engine
+enable_service murano-engine
 enable_service murano-dashboard
 EOF
 

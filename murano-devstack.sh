@@ -157,7 +157,7 @@ function run_tests() {
     local retval=0
     local tests_dir=$TESTS_DIR
 
-    sudo rm -f /tmp/parser_table.py
+#    sudo rm -f /tmp/parser_table.py
 
     cd ${tests_dir}/functionaltests
     $NOSETESTS_CMD sanity_check -sv |:
@@ -184,9 +184,10 @@ function collect_artifacts() {
     for src in $sources; do
         if [ -e ${src} ]; then
             if [ -d ${src} ]; then
+                # Keep leading slash in source path to copy folder content only!
                 sudo rsync -v -r ${src}/ ${destination}
             else
-                sudo rsync -v -r ${src} ${destination}
+                sudo rsync -v ${src} ${destination}
             fi
         fi
     done
@@ -254,11 +255,12 @@ EOF
 
 function configure_apt_cacher() {
     local apt_proxy_file=/etc/apt/apt.conf.d/01proxy
-    local apt_proxy_host=${2:-'172.18.124.203'}
+    local apt_proxy_host=${2:-'172.18.124.201'}
 
     case $1 in
         enable)
-            sudo sh -c "echo 'Acquire::http::proxy \"http://${apt_proxy_host}:3142\";' > $apt_proxy_file"
+#            sudo sh -c "echo 'Acquire::http::proxy \"http://${apt_proxy_host}:3142\";' > $apt_proxy_file"
+            sudo sh -c "echo 'Acquire::http { Proxy \"http://${apt_proxy_host}:3142\"; };"
             sudo apt-get update
         ;;
         disable)
@@ -267,6 +269,19 @@ function configure_apt_cacher() {
         ;;
     esac
 }
+
+
+function start_xvfb_session() {
+    export DISPLAY=:${DISPLAY_NUM}
+
+    fonts_path="/usr/share/fonts/X11/misc/"
+    if [ $distro_based_on == "redhat" ]; then
+        fonts_path="/usr/share/X11/fonts/misc/"
+    fi
+
+    $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1024x768x16
+}
+
 
 
 #Starting up:
@@ -280,14 +295,7 @@ configure_apt_cacher enable
 
 cd $WORKSPACE
 
-export DISPLAY=:${DISPLAY_NUM}
-
-fonts_path="/usr/share/fonts/X11/misc/"
-if [ $distro_based_on == "redhat" ]; then
-    fonts_path="/usr/share/X11/fonts/misc/"
-fi
-
-$SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1024x768x16
+start_xvfb_session
 
 sudo $NTPDATE_CMD -u ru.pool.ntp.org
 sudo $FW_CMD -F
@@ -296,6 +304,7 @@ get_ip_from_iface eth0
 
 deploy_devstack
 
+# Fix iptables to allow outbound access
 sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
 
 prepare_tests

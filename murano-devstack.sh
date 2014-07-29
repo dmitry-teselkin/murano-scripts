@@ -260,7 +260,7 @@ function configure_apt_cacher() {
     case $1 in
         enable)
 #            sudo sh -c "echo 'Acquire::http::proxy \"http://${apt_proxy_host}:3142\";' > $apt_proxy_file"
-            sudo sh -c "echo 'Acquire::http { Proxy \"http://${apt_proxy_host}:3142\"; };"
+            sudo sh -c "echo 'Acquire::http { Proxy \"http://${apt_proxy_host}:3142\"; };' > ${apt_proxy_file}"
             sudo apt-get update
         ;;
         disable)

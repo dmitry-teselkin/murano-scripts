@@ -287,8 +287,8 @@ function start_xvfb_session() {
     $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1920x1280x16
 
     sudo apt-get install --yes x11vnc
-    x11vnc -display :${DISPLAY_NUM} &
-    sudo iptables -I INPUT 1 -p tcp --dport "59${DISPLAY_NUM}" -j ACCEPT
+    x11vnc -nopw -display :${DISPLAY_NUM} &
+    sudo iptables -I INPUT 1 -p tcp --dport 5900 -j ACCEPT
 }
 
 

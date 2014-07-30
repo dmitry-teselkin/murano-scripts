@@ -278,12 +278,16 @@ function configure_apt_cacher() {
 function start_xvfb_session() {
     export DISPLAY=:${DISPLAY_NUM}
 
+    apt-get install --yes x11vnc
+
     fonts_path="/usr/share/fonts/X11/misc/"
     if [ $distro_based_on == "redhat" ]; then
         fonts_path="/usr/share/X11/fonts/misc/"
     fi
 
     $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1920x1280x16
+
+    x11vnc -display :${DISPLAY_NUM} &
 }
 
 

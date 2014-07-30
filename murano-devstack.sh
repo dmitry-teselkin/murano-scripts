@@ -157,7 +157,7 @@ function run_tests() {
     local retval=0
     local tests_dir="${PROJECT_DIR}/muranodashboard/tests/functional"
 
-#    sudo rm -f /tmp/parser_table.py
+    sudo rm -f /tmp/parser_table.py
 
     cd ${tests_dir}
     $NOSETESTS_CMD sanity_check -sv |:

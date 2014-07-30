@@ -120,18 +120,18 @@ function prepare_incubator_at() {
 
 function prepare_tests() {
     local retval=0
-    local tests_dir=$TESTS_DIR
+    local tests_dir="${PROJECT_DIR}/tests/functional"
 
     if [ ! -d "$tests_dir" ]; then
         echo "Directory with tests isn't exist"
         return 1
     fi
 
-    sudo chown -R $USER ${tests_dir}/functionaltests
+    sudo chown -R $USER ${tests_dir}
 
     cd $tests_dir
 
-    local tests_config=${tests_dir}/functionaltests/config/config_file.conf
+    local tests_config=${tests_dir}/config/config_file.conf
 
     iniset 'common' 'keystone_url' "$(shield_slashes http://${KEYSTONE_URL}:5000/v2.0/)" "$tests_config"
     iniset 'common' 'horizon_url' "$(shield_slashes http://${found_ip_address}/)" "$tests_config"
@@ -140,7 +140,7 @@ function prepare_tests() {
     iniset 'common' 'password' "$ADMIN_PASSWORD" "$tests_config"
     iniset 'common' 'tenant' "$ADMIN_TENANT" "$tests_config"
 
-    cd $tests_dir/functionaltests
+    cd $tests_dir
 
     prepare_incubator_at $(pwd) || retval=$?
 
@@ -155,11 +155,11 @@ function prepare_tests() {
 
 function run_tests() {
     local retval=0
-    local tests_dir=$TESTS_DIR
+    local tests_dir="${PROJECT_DIR}/tests/functional"
 
 #    sudo rm -f /tmp/parser_table.py
 
-    cd ${tests_dir}/functionaltests
+    cd ${tests_dir}
     $NOSETESTS_CMD sanity_check -sv |:
 
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
@@ -286,8 +286,7 @@ function start_xvfb_session() {
 
 #Starting up:
 WORKSPACE=$(cd $WORKSPACE && pwd)
-
-TESTS_DIR="/opt/stack/murano-dashboard"
+PROJECT_DIR="/opt/stack/murano-dashboard"
 
 sudo sh -c "echo '127.0.0.1 $(hostname)' >> /etc/hosts"
 

@@ -278,7 +278,7 @@ function configure_apt_cacher() {
 function start_xvfb_session() {
     export DISPLAY=:${DISPLAY_NUM}
 
-    apt-get install --yes x11vnc
+    sudo apt-get install --yes x11vnc
 
     fonts_path="/usr/share/fonts/X11/misc/"
     if [ $distro_based_on == "redhat" ]; then

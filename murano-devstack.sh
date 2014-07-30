@@ -278,7 +278,6 @@ function configure_apt_cacher() {
 function start_xvfb_session() {
     export DISPLAY=:${DISPLAY_NUM}
 
-    sudo apt-get install --yes x11vnc
 
     fonts_path="/usr/share/fonts/X11/misc/"
     if [ $distro_based_on == "redhat" ]; then
@@ -287,7 +286,9 @@ function start_xvfb_session() {
 
     $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1920x1280x16
 
+    sudo apt-get install --yes x11vnc
     x11vnc -display :${DISPLAY_NUM} &
+    sudo iptables -I INPUT 1 -p tcp --dport "59${DISPLAY_NUM}" -j ACCEPT
 }
 
 

@@ -279,7 +279,7 @@ function start_xvfb_session() {
         fonts_path="/usr/share/X11/fonts/misc/"
     fi
 
-    $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1024x768x16
+    $SCREEN_CMD -dmS display sudo Xvfb -fp ${fonts_path} :${DISPLAY_NUM} -screen 0 1920x1280x16
 }
 
 

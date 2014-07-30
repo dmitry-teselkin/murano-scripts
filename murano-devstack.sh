@@ -157,19 +157,18 @@ function run_tests() {
     local retval=0
     local tests_dir="${PROJECT_DIR}/muranodashboard/tests/functional"
 
+    # TODO(dteselkin): Remove this workaround as soon as
+    #     https://bugs.launchpad.net/murano/+bug/1349934 is fixed.
     sudo rm -f /tmp/parser_table.py
 
-    cd ${tests_dir}
+    pushd ${tests_dir}
+
     $NOSETESTS_CMD sanity_check -sv |:
+    retval=${PIPESTATUS[0]}
 
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
-        collect_artifacts $STORE_AS_ARTIFACTS
-        retval=1
-    else
-        collect_artifacts $STORE_AS_ARTIFACTS
-    fi
+    collect_artifacts $STORE_AS_ARTIFACTS
 
-    cd $WORKSPACE
+    popd
 
     return $retval
 }
@@ -200,7 +199,7 @@ function collect_artifacts() {
 }
 
 
-function deploy_devstack() {
+function git_clone_devstack() {
     # Assuming the script is run from 'jenkins' user
     local git_dir=/opt/git
 
@@ -208,6 +207,12 @@ function deploy_devstack() {
     sudo chown -R jenkins:jenkins "$git_dir/openstack-dev"
     cd "$git_dir/openstack-dev"
     git clone https://github.com/openstack-dev/devstack
+}
+
+
+function deploy_devstack() {
+    # Assuming the script is run from 'jenkins' user
+    local git_dir=/opt/git
 
     sudo mkdir -p "$git_dir/stackforge"
     sudo chown -R jenkins:jenkins "$git_dir/stackforge"
@@ -259,7 +264,6 @@ function configure_apt_cacher() {
 
     case $1 in
         enable)
-#            sudo sh -c "echo 'Acquire::http::proxy \"http://${apt_proxy_host}:3142\";' > $apt_proxy_file"
             sudo sh -c "echo 'Acquire::http { Proxy \"http://${apt_proxy_host}:3142\"; };' > ${apt_proxy_file}"
             sudo apt-get update
         ;;
@@ -289,6 +293,8 @@ WORKSPACE=$(cd $WORKSPACE && pwd)
 PROJECT_DIR="/opt/stack/murano-dashboard"
 
 sudo sh -c "echo '127.0.0.1 $(hostname)' >> /etc/hosts"
+
+git_clone_devstack
 
 configure_apt_cacher enable
 

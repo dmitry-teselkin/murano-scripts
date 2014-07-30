@@ -120,7 +120,7 @@ function prepare_incubator_at() {
 
 function prepare_tests() {
     local retval=0
-    local tests_dir="${PROJECT_DIR}/tests/functional"
+    local tests_dir="${PROJECT_DIR}/muranodashboard/tests/functional"
 
     if [ ! -d "$tests_dir" ]; then
         echo "Directory with tests isn't exist"
@@ -155,7 +155,7 @@ function prepare_tests() {
 
 function run_tests() {
     local retval=0
-    local tests_dir="${PROJECT_DIR}/tests/functional"
+    local tests_dir="${PROJECT_DIR}/muranodashboard/tests/functional"
 
 #    sudo rm -f /tmp/parser_table.py
 

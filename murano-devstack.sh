@@ -255,6 +255,9 @@ EOF
     sudo chown -R stack:stack "$git_dir/openstack-dev/devstack"
 
     sudo su -c "cd $git_dir/openstack-dev/devstack && ./stack.sh" stack
+
+    # Fix iptables to allow outbound access
+    sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
 }
 
 
@@ -305,7 +308,7 @@ configure_apt_cacher enable
 
 cd $WORKSPACE
 
-start_xvfb_session
+#start_xvfb_session
 
 sudo $NTPDATE_CMD -u ru.pool.ntp.org
 sudo $FW_CMD -F
@@ -314,8 +317,7 @@ get_ip_from_iface eth0
 
 deploy_devstack
 
-# Fix iptables to allow outbound access
-sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+start_xvfb_session
 
 prepare_tests
 

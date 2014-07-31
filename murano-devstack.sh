@@ -65,9 +65,9 @@ fi
 
 
 RSYNC_BUILD_ARTIFACTS="
---recursive /tmp/murano-artifacts
+--recursive /tmp/murano-artifacts/
 --include='murano*.log' --exclude='*' /tmp
---recursive ${PROJECT_DIR}/tests/functional/screenshots
+--recursive ${PROJECT_DIR}/tests/functional/screenshots/
 --include='*.log' --exclude='*' /opt/stack/log
 ${rsync_apache_logs}
 "
@@ -209,7 +209,7 @@ function collect_artifacts() {
 
     while IFS= read -r rsync_args; do
         [ -z "$rsync_args" ] && continue
-        sudo rsync --verbose ${rsync_args} "${destination}" |:
+        sudo rsync --verbose ${rsync_args} "${destination}" ||:
     done <<< "$RSYNC_BUILD_ARTIFACTS"
 
 #    sudo rsync --verbose --recursive --include='*.log' --exclude='*' /opt/stack/log ${destination}

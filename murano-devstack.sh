@@ -229,7 +229,7 @@ function collect_artifacts() {
         [ -z "$rsync_args" ] && continue
         rsync_cmd="rsync --archive --verbose ${rsync_args} ${destination}"
         echo ${rsync_cmd}
-        sudo ${rsync_cmd} ||:
+        eval "sudo ${rsync_cmd} ||:"
     done <<< "$RSYNC_BUILD_ARTIFACTS"
 
 #    sudo rsync --verbose --recursive --include='*.log' --exclude='*' /opt/stack/log ${destination}

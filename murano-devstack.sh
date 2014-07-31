@@ -60,7 +60,7 @@ FW_CMD=$(which iptables)
 
 # Virtual framebuffer settings
 #-----------------------------
-VFB_DISPLAY_SIZE='1920x1280'
+VFB_DISPLAY_SIZE='1280x1024'
 VFB_COLOR_DEPTH=16
 VFB_DISPLAY_NUM=22
 #-----------------------------
@@ -297,6 +297,9 @@ function start_xvfb_session() {
     sudo apt-get install --yes x11vnc
     x11vnc -nopw -display ${DISPLAY} &
     sudo iptables -I INPUT 1 -p tcp --dport 5900 -j ACCEPT
+
+    sudo apt-get install --yes openbox
+    exec openbox &
 }
 
 

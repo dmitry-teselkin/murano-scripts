@@ -189,16 +189,16 @@ function collect_artifacts() {
 
     ### Add correct Apache log path
     if [ $distro_based_on == "redhat" ]; then
-        apache_log_file="/var/log/httpd/error_log"
+        apache_log_dir="/var/log/httpd/"
     else
-        apache_log_file="/var/log/apache2/error_log"
+        apache_log_dir="/var/log/apache2/"
     fi
 
     sudo rsync -rLv /tmp/murano-artifacts/ ${dst} ||:
     sudo rsync -rLv ${PROJECT_DIR}/${TESTS_DIR}/screenshots/ ${dst} ||:
     sudo rsync -rLv --include='murano*.log' --exclude='*' /tmp/ ${dst} ||:
     sudo rsync -rLv --include='*.log' --exclude='*' ${STACK_HOME}/log/ ${dst} ||:
-    sudo rsync -rLv ${apache_log_file} ${dst} ||:
+    sudo rsync -rLv --include='*.log' --exclude='*' ${apache_log_dir} ${dst} ||:
 
     sudo chown -R jenkins:jenkins ${dst}
 }

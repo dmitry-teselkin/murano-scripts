@@ -208,7 +208,8 @@ function collect_artifacts() {
 #    done
 
     while IFS= read -r rsync_args; do
-        sudo rsync --verbose ${rsync_args} ${destination} |:
+        [ -z "$rsync_args" ] && continue
+        sudo rsync --verbose ${rsync_args} "${destination}" |:
     done <<< "$RSYNC_BUILD_ARTIFACTS"
 
 #    sudo rsync --verbose --recursive --include='*.log' --exclude='*' /opt/stack/log ${destination}

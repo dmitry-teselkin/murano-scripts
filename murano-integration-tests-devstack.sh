@@ -307,12 +307,8 @@ enable_service horizon
 enable_service murano
 enable_service murano-api
 enable_service murano-engine
+enable_service murano-dashboard
 EOF
-
-    # Enable murano-dashboard if required
-    if [ $PROJECT_NAME == 'murano-dashboard' ]; then
-        echo "enable_service murano-dashboard" >> local.conf
-    fi
 
     sudo ./tools/create-stack-user.sh
 

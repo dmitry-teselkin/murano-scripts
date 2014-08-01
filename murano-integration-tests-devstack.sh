@@ -313,7 +313,7 @@ MURANO_DASHBOARD_REPO=${ZUUL_URL}/stackforge/murano-dashboard
 MURANO_DASHBOARD_BRANCH=${ZUUL_REF}
 EOF
     else
-        cat << EOF > local.conf
+        cat << EOF >> local.conf
 MURANO_REPO=${ZUUL_URL}/stackforge/murano
 MURANO_BRANCH=${ZUUL_REF}
 EOF

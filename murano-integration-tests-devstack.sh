@@ -164,7 +164,11 @@ function prepare_tests() {
 
     sudo chown -R $USER ${project_tests_dir}
 
-    local tests_config=${project_tests_dir}/config/config_file.conf
+    if [ $PROJECT_NAME == 'murano-dashboard' ]; then
+        local tests_config=${project_tests_dir}/config/config_file.conf
+    else
+        local tests_config=${project_tests_dir}/engine/config.conf
+    fi
 
     iniset 'common' 'keystone_url' "$(shield_slashes http://${KEYSTONE_URL}:5000/v2.0/)" "$tests_config"
     iniset 'common' 'horizon_url' "$(shield_slashes http://${found_ip_address}/)" "$tests_config"

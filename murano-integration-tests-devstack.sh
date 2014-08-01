@@ -143,8 +143,10 @@ function prepare_murano_apps() {
         fi
     done
 
-    cd ${start_dir}
-    bash murano-app-incubator/make-package.sh MockApp
+    if [ $PROJECT_NAME == 'murano-dashboard' ]; then
+        cd ${start_dir}
+        bash murano-app-incubator/make-package.sh MockApp
+    fi
 
     if [ $pkg_counter -eq 0 ]; then
         echo "Warning: $pkg_counter packages was built at $clone_dir!"

@@ -7,6 +7,6 @@ sudo dpkg-reconfigure locales
 
 git clone https://github.com/stackforge/murano-deployment
 cd murano-deployment/murano-ci/scripts
-wget https://raw.githubusercontent.com/dmitry-teselkin/murano-scripts/master/murano-devstack.sh
-bash murano-devstack.sh
+wget https://raw.githubusercontent.com/dmitry-teselkin/murano-scripts/master/murano-integration-tests-devstack.sh
+bash -x murano-integration-tests-devstack.sh
 

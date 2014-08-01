@@ -51,12 +51,10 @@ case $PROJECT_NAME in
     'murano-engine')
         PROJECT_DIR="${STACK_HOME}/murano"
         TESTS_DIR="murano/tests/functional"
-        PROJECT_GIT_SUFFIX="stackforge/murano"
     ;;
     'murano-dashboard')
         PROJECT_DIR="${STACK_HOME}/murano-dashboard"
         TESTS_DIR="muranodashboard/tests/functional"
-        PROJECT_GIT_SUFFIX="stackforge/murano-dashboard"
     ;;
     *)
         echo "Unknown project name '$PROJECT_NAME'"
@@ -283,6 +281,7 @@ function deploy_devstack() {
     rsync --recursive --exclude README.* "$git_dir/stackforge/murano-api/contrib/devstack/" "$git_dir/openstack-dev/devstack/"
 
     cd "$git_dir/openstack-dev/devstack"
+
     cat << EOF > local.conf
 [[local|localrc]]
 HOST_IP=${KEYSTONE_URL}             # IP address of OpenStack lab
@@ -298,8 +297,6 @@ MURANO_RABBIT_VHOST=/
 RECLONE=True
 SCREEN_LOGDIR=/opt/stack/log/
 LOGFILE=\$SCREEN_LOGDIR/stack.sh.log
-MURANO_DASHBOARD_REPO=${ZUUL_URL}/${PROJECT_GIT_SUFFIX}
-MURANO_DASHBOARD_BRANCH=${ZUUL_REF}
 ENABLED_SERVICES=
 enable_service mysql
 enable_service rabbit
@@ -309,6 +306,19 @@ enable_service murano-api
 enable_service murano-engine
 enable_service murano-dashboard
 EOF
+
+    if [ $PROJECT_NAME == 'murano-dashboard' ]; then
+        cat << EOF >> local.conf
+MURANO_DASHBOARD_REPO=${ZUUL_URL}/stackforge/murano-dashboard
+MURANO_DASHBOARD_BRANCH=${ZUUL_REF}
+EOF
+    else
+        cat << EOF > local.conf
+MURANO_REPO=${ZUUL_URL}/stackforge/murano
+MURANO_BRANCH=${ZUUL_REF}
+EOF
+    fi
+
 
     sudo ./tools/create-stack-user.sh
 
